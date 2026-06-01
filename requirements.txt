@@ -2,7 +2,9 @@
 google-genai>=1.0.0        # SDK oficial de Gemini
 python-dotenv>=1.0.0       # Carga de variables desde .env
 
-# ===== API / servidor =====
+# ===== API / servidor (webhook de WhatsApp) =====
 fastapi>=0.110.0
 uvicorn[standard]>=0.27.0
 httpx>=0.27.0
+python-multipart>=0.0.9     # FastAPI necesita esto para leer formularios
+twilio>=9.0.0               # canal WhatsApp (sandbox)
