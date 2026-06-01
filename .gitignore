@@ -1,0 +1,43 @@
+# ===== Secretos / credenciales (NUNCA subir) =====
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+credentials.json
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+
+# ===== Entornos virtuales =====
+.venv/
+venv/
+env/
+ENV/
+
+# ===== Base de datos (se regenera con seed.py) =====
+*.db
+*.sqlite
+*.sqlite3
+
+# ===== IDE / Editor =====
+.vscode/
+.idea/
+*.swp
+
+# ===== Sistema operativo =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Logs =====
+*.log
+logs/
