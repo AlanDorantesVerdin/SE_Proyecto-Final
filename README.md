@@ -16,6 +16,7 @@ razonamiento en cada paso.
 |---|---|
 | **Agente 1 — Atención al Cliente** | ✅ Funcional (intención + entidades + respuesta) |
 | **Canal WhatsApp (Twilio)** | ✅ Webhook listo (requiere cuenta Twilio + ngrok) |
+| **Motor de inferencia + reglas** | ✅ Forward chaining con explicabilidad |
 | Agente 2 — Generador de Pedido | ⏳ Pendiente |
 | Agente 3 — Supervisor / Explicador | ⏳ Pendiente |
 | Interfaz de usuario (UI) | ⏳ Pendiente |
@@ -75,6 +76,8 @@ SE_Proyecto-Final/
 │   ├── schemas.py            # Objetos de dominio (Intent, Interpretation…)
 │   ├── knowledge_base.py     # Reglas/keywords (base de conocimiento)
 │   ├── llm_client.py         # Cliente Gemini con degradación elegante
+│   ├── inference_engine.py   # Motor de inferencia (forward chaining)
+│   ├── business_rules.py     # Reglas de negocio (descuentos, stock)
 │   └── console.py            # Utilidad de salida UTF-8 (Windows)
 ├── database/
 │   ├── db.py                 # Conexión y esquema SQLite
@@ -85,6 +88,7 @@ SE_Proyecto-Final/
 ├── api/
 │   └── main.py               # Servidor FastAPI + webhook de WhatsApp
 ├── run_cli.py                # Prueba local del Agente 1 por terminal
+├── run_inference.py          # Demo del motor de inferencia (IF/THEN)
 ├── requirements.txt
 ├── .env.example              # Plantilla de variables (copiar a .env)
 ├── WHATSAPP_SETUP.md         # Guía para conectar WhatsApp
@@ -126,10 +130,11 @@ LLM_MODEL=gemini-2.5-flash
 python -m database.seed
 ```
 
-### 5. Probar el Agente 1
+### 5. Probar el Agente 1 y el motor de inferencia
 ```powershell
-python run_cli.py --demo        # conversación de ejemplo automática
+python run_cli.py --demo        # conversación de ejemplo del Agente 1
 python run_cli.py               # modo interactivo (chateas tú)
+python run_inference.py         # razonamiento del sistema experto (IF/THEN)
 ```
 
 ### 6. Conectar a WhatsApp (opcional)
