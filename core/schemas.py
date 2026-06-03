@@ -88,3 +88,50 @@ class Interpretation:
             "trace": [{"rule": s.rule, "detail": s.detail} for s in self.trace],
             "reply": self.reply,
         }
+
+
+@dataclass
+class OrderLine:
+    """Una línea del pedido: una película con su cantidad y precio."""
+    title: str
+    action: str                # "rentar" | "comprar"
+    quantity: int
+    unit_price: float
+    line_total: float
+    available: bool
+
+
+@dataclass
+class Order:
+    """Pedido generado por el Agente 2 a partir de la interpretación del cliente."""
+    customer_name: str
+    lines: list[OrderLine] = field(default_factory=list)
+    subtotal: float = 0.0
+    discount_pct: float = 0.0
+    discount_amount: float = 0.0
+    total: float = 0.0
+    restock: list = field(default_factory=list)
+    reasoning: list[str] = field(default_factory=list)   # inferencias (reglas disparadas)
+    status: str = "propuesto"                            # propuesto | confirmado | sin_items
+    order_id: Optional[int] = None                       # se asigna al guardar en BD (Día 4)
+
+    def to_dict(self) -> dict:
+        return {
+            "order_id": self.order_id,
+            "customer_name": self.customer_name,
+            "status": self.status,
+            "lines": [
+                {
+                    "title": ln.title, "action": ln.action, "quantity": ln.quantity,
+                    "unit_price": ln.unit_price, "line_total": ln.line_total,
+                    "available": ln.available,
+                }
+                for ln in self.lines
+            ],
+            "subtotal": self.subtotal,
+            "discount_pct": self.discount_pct,
+            "discount_amount": self.discount_amount,
+            "total": self.total,
+            "restock": self.restock,
+            "reasoning": self.reasoning,
+        }
