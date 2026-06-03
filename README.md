@@ -17,7 +17,7 @@ razonamiento en cada paso.
 | **Agente 1 — Atención al Cliente** | ✅ Funcional (intención + entidades + respuesta) |
 | **Canal WhatsApp (Twilio)** | ✅ Webhook listo (requiere cuenta Twilio + ngrok) |
 | **Motor de inferencia + reglas** | ✅ Forward chaining con explicabilidad |
-| Agente 2 — Generador de Pedido | ⏳ Pendiente |
+| **Agente 2 — Generador de Pedido** | ✅ Valida, infiere descuentos/stock y arma el pedido |
 | Agente 3 — Supervisor / Explicador | ⏳ Pendiente |
 | Interfaz de usuario (UI) | ⏳ Pendiente |
 
@@ -71,7 +71,8 @@ razonamiento en cada paso.
 ```
 SE_Proyecto-Final/
 ├── agents/
-│   └── agent_customer.py     # Agente 1 — Atención al Cliente
+│   ├── agent_customer.py     # Agente 1 — Atención al Cliente
+│   └── agent_orders.py       # Agente 2 — Generador de Pedido
 ├── core/
 │   ├── schemas.py            # Objetos de dominio (Intent, Interpretation…)
 │   ├── knowledge_base.py     # Reglas/keywords (base de conocimiento)
@@ -89,6 +90,7 @@ SE_Proyecto-Final/
 │   └── main.py               # Servidor FastAPI + webhook de WhatsApp
 ├── run_cli.py                # Prueba local del Agente 1 por terminal
 ├── run_inference.py          # Demo del motor de inferencia (IF/THEN)
+├── run_orders.py             # Demo del Agente 2 (generación de pedido)
 ├── requirements.txt
 ├── .env.example              # Plantilla de variables (copiar a .env)
 ├── WHATSAPP_SETUP.md         # Guía para conectar WhatsApp
@@ -135,6 +137,7 @@ python -m database.seed
 python run_cli.py --demo        # conversación de ejemplo del Agente 1
 python run_cli.py               # modo interactivo (chateas tú)
 python run_inference.py         # razonamiento del sistema experto (IF/THEN)
+python run_orders.py            # genera un pedido con descuentos (Agente 2)
 ```
 
 ### 6. Conectar a WhatsApp (opcional)
