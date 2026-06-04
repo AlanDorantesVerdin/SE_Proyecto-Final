@@ -40,6 +40,10 @@ def seed(db_path: str | None = None) -> None:
     init_db(db_path)
     conn = get_connection(db_path)
     try:
+        # Limpiar transacciones para un estado de demostración consistente
+        # (además, las claves foráneas impiden borrar películas con pedidos).
+        for tabla in ("order_items", "rentals", "restock_suggestions", "orders"):
+            conn.execute(f"DELETE FROM {tabla};")
         conn.execute("DELETE FROM movies;")
         conn.executemany(
             "INSERT INTO movies "

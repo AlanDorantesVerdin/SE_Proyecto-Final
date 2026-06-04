@@ -50,6 +50,28 @@ CREATE TABLE IF NOT EXISTS order_items (
     quantity    INTEGER NOT NULL,
     unit_price  REAL NOT NULL
 );
+
+-- Rentas con fecha de vencimiento (permite detectar 'rentas vencidas').
+CREATE TABLE IF NOT EXISTS rentals (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_id INTEGER REFERENCES customers(id),
+    movie_id    INTEGER REFERENCES movies(id),
+    order_id    INTEGER REFERENCES orders(id),
+    rented_at   TEXT DEFAULT CURRENT_TIMESTAMP,
+    due_date    TEXT,
+    returned_at TEXT,
+    status      TEXT DEFAULT 'activa'            -- activa | devuelta | vencida
+);
+
+-- Bitácora de sugerencias de reabastecimiento generadas por las inferencias.
+CREATE TABLE IF NOT EXISTS restock_suggestions (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    movie_id      INTEGER REFERENCES movies(id),
+    title         TEXT,
+    suggested_qty INTEGER,
+    created_at    TEXT DEFAULT CURRENT_TIMESTAMP,
+    status        TEXT DEFAULT 'pendiente'       -- pendiente | atendida
+);
 """
 
 
