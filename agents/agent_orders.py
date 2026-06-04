@@ -15,7 +15,7 @@ from __future__ import annotations
 from core.business_rules import build_order_rules, make_order_facts
 from core.inference_engine import InferenceEngine
 from core.schemas import Intent, Interpretation, Order, OrderLine
-from database.repository import get_customer_by_phone
+from database.repository import ensure_customer, get_customer_by_phone, persist_order
 
 
 class OrderGeneratorAgent:
@@ -65,6 +65,33 @@ class OrderGeneratorAgent:
             reasoning=result.reasoning,
             status="propuesto",
         )
+
+    def confirm(self, order: Order, customer_phone: str | None = None) -> Order:
+        """
+        Persiste el pedido en la base de datos (todo o nada): guarda el pedido y
+        sus líneas, descuenta el stock, registra las rentas con su fecha de
+        vencimiento y anota las sugerencias de reabastecimiento.
+        """
+        if order.status == "sin_items" or not order.lines:
+            return order
+
+        customer_id = ensure_customer(customer_phone, order.customer_name, self.db_path)
+
+        acciones = {ln.action for ln in order.lines if ln.available}
+        if acciones == {"rentar"}:
+            tipo = "renta"
+        elif acciones == {"comprar"}:
+            tipo = "compra"
+        elif acciones:
+            tipo = "mixto"
+        else:
+            tipo = "compra"
+
+        order.order_id = persist_order(
+            customer_id=customer_id, tipo=tipo, order=order, db_path=self.db_path
+        )
+        order.status = "confirmado"
+        return order
 
     def _items_from_interpretation(self, interp: Interpretation) -> list[dict]:
         """Toma solo los ítems identificados en el catálogo y normaliza la acción."""
