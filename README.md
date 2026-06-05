@@ -19,7 +19,7 @@ razonamiento en cada paso.
 | **Motor de inferencia + reglas** | ✅ Forward chaining con explicabilidad |
 | **Agente 2 — Generador de Pedido** | ✅ Valida, infiere descuentos/stock y arma el pedido |
 | **Persistencia en BD** | ✅ Guarda pedidos y rentas, descuenta stock, registra reabastecimiento |
-| Agente 3 — Supervisor / Explicador | ⏳ Pendiente |
+| **Agente 3 — Supervisor / Explicador** | ✅ Resume, explica inferencias y pide validación |
 | Interfaz de usuario (UI) | ⏳ Pendiente |
 
 ---
@@ -37,13 +37,13 @@ razonamiento en cada paso.
                                  │ Interpretation (handoff)
                                  ▼
                  ┌──────────────────────────────┐
-                 │  Agente 2: Generador de Pedido │  (próximamente)
+                 │  Agente 2: Generador de Pedido │
                  │  • Valida e infiere (IF/THEN)  │
                  │  • Genera y guarda el pedido   │
                  └───────────────┬──────────────┘
                                  ▼
                  ┌──────────────────────────────┐
-                 │  Agente 3: Supervisor/Explica  │  (próximamente)
+                 │  Agente 3: Supervisor/Explica  │
                  │  • Resume y explica decisiones │
                  └──────────────────────────────┘
 ```
@@ -73,7 +73,8 @@ razonamiento en cada paso.
 SE_Proyecto-Final/
 ├── agents/
 │   ├── agent_customer.py     # Agente 1 — Atención al Cliente
-│   └── agent_orders.py       # Agente 2 — Generador de Pedido
+│   ├── agent_orders.py       # Agente 2 — Generador de Pedido
+│   └── agent_supervisor.py   # Agente 3 — Supervisor / Explicador
 ├── core/
 │   ├── schemas.py            # Objetos de dominio (Intent, Interpretation…)
 │   ├── knowledge_base.py     # Reglas/keywords (base de conocimiento)
@@ -93,6 +94,7 @@ SE_Proyecto-Final/
 ├── run_inference.py          # Demo del motor de inferencia (IF/THEN)
 ├── run_orders.py             # Demo del Agente 2 (generación de pedido)
 ├── run_persist.py            # Demo de persistencia (guardar pedido en BD)
+├── run_supervisor.py         # Demo del flujo completo 1 -> 2 -> 3
 ├── requirements.txt
 ├── .env.example              # Plantilla de variables (copiar a .env)
 ├── WHATSAPP_SETUP.md         # Guía para conectar WhatsApp
@@ -141,6 +143,7 @@ python run_cli.py               # modo interactivo (chateas tú)
 python run_inference.py         # razonamiento del sistema experto (IF/THEN)
 python run_orders.py            # genera un pedido con descuentos (Agente 2)
 python run_persist.py           # guarda un pedido en la base de datos
+python run_supervisor.py        # flujo completo de los 3 agentes (1 -> 2 -> 3)
 ```
 
 ### 6. Conectar a WhatsApp (opcional)
