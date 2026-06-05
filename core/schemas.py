@@ -135,3 +135,22 @@ class Order:
             "restock": self.restock,
             "reasoning": self.reasoning,
         }
+
+
+@dataclass
+class SupervisorReport:
+    """Reporte del Agente 3: resumen, explicación de inferencias y validación."""
+    summary: str                                       # resumen de la venta
+    decisions: list[str] = field(default_factory=list) # inferencias/decisiones explicadas
+    validation_request: str = ""                       # solicitud de validación final
+    message: str = ""                                  # mensaje completo para el cliente
+    requires_attention: bool = False                   # p. ej. hay reabastecimiento pendiente
+
+    def to_dict(self) -> dict:
+        return {
+            "summary": self.summary,
+            "decisions": self.decisions,
+            "validation_request": self.validation_request,
+            "message": self.message,
+            "requires_attention": self.requires_attention,
+        }
