@@ -197,3 +197,12 @@ def list_restock(db_path: str | None = None) -> list[sqlite3.Row]:
         return conn.execute("SELECT * FROM restock_suggestions ORDER BY id").fetchall()
     finally:
         conn.close()
+
+
+def count_orders(db_path: str | None = None) -> int:
+    """Cuenta cuántos pedidos hay guardados."""
+    conn = get_connection(db_path)
+    try:
+        return conn.execute("SELECT COUNT(*) AS n FROM orders").fetchone()["n"]
+    finally:
+        conn.close()
