@@ -27,7 +27,6 @@ enable_utf8()
 
 from fastapi import FastAPI, Request, Response  # noqa: E402
 
-from agents.agent_customer import CustomerServiceAgent  # noqa: E402
 from channels.whatsapp_twilio import (  # noqa: E402
     build_reply,
     is_valid_signature,
@@ -36,14 +35,15 @@ from channels.whatsapp_twilio import (  # noqa: E402
 from core.llm_client import LLMClient  # noqa: E402
 from database.repository import count_movies  # noqa: E402
 from database.seed import seed  # noqa: E402
+from orchestrator import Orchestrator  # noqa: E402
 
 # Inicialización única al arrancar el servidor.
 if count_movies() == 0:
     seed()
 llm = LLMClient()
-agent = CustomerServiceAgent(llm=llm)
+orchestrator = Orchestrator(llm=llm)
 
-app = FastAPI(title="CineFísico — WhatsApp (Agente 1)")
+app = FastAPI(title="CineFísico — WhatsApp (3 agentes)")
 
 
 @app.get("/")
@@ -52,14 +52,14 @@ def health() -> dict:
     return {
         "status": "ok",
         "service": "CineFísico",
-        "agent": agent.name,
+        "agents": "1 (atención) + 2 (pedido) + 3 (explicador)",
         "llm": "activo" if llm.available else "solo reglas",
     }
 
 
 @app.post("/webhook/whatsapp")
 async def whatsapp_webhook(request: Request) -> Response:
-    """Recibe un mensaje de WhatsApp (vía Twilio) y responde con el Agente 1."""
+    """Recibe un mensaje de WhatsApp (vía Twilio) y responde con el flujo de 3 agentes."""
     form = dict(await request.form())
 
     # Seguridad opcional: validar que la petición proviene de Twilio.
@@ -74,9 +74,8 @@ async def whatsapp_webhook(request: Request) -> Response:
     if not text:
         reply = "Envíame un mensaje de texto y con gusto te ayudo. 🎬"
     else:
-        interp = agent.handle(text, customer_phone=phone)
-        reply = interp.reply
+        reply = orchestrator.handle_message(text, phone=phone)
         # Traza en consola, útil durante la demostración.
-        print(f"[WhatsApp] {phone}: {text!r} -> intención={interp.intent.value}")
+        print(f"[WhatsApp] {phone}: {text!r}")
 
     return Response(content=build_reply(reply), media_type="application/xml")

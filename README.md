@@ -15,11 +15,12 @@ razonamiento en cada paso.
 | Componente | Estado |
 |---|---|
 | **Agente 1 — Atención al Cliente** | ✅ Funcional (intención + entidades + respuesta) |
-| **Canal WhatsApp (Twilio)** | ✅ Webhook listo (requiere cuenta Twilio + ngrok) |
+| **Canal WhatsApp (Twilio)** | ✅ Flujo completo de 3 agentes por mensajes (requiere Twilio + ngrok) |
 | **Motor de inferencia + reglas** | ✅ Forward chaining con explicabilidad |
 | **Agente 2 — Generador de Pedido** | ✅ Valida, infiere descuentos/stock y arma el pedido |
 | **Persistencia en BD** | ✅ Guarda pedidos y rentas, descuenta stock, registra reabastecimiento |
 | **Agente 3 — Supervisor / Explicador** | ✅ Resume, explica inferencias y pide validación |
+| **Orquestador conversacional** | ✅ Une 1→2→3 con confirmación (SÍ/NO) por WhatsApp |
 | Interfaz de usuario (UI) | ⏳ Pendiente |
 
 ---
@@ -90,11 +91,13 @@ SE_Proyecto-Final/
 │   └── whatsapp_twilio.py    # Adaptador del canal WhatsApp (Twilio)
 ├── api/
 │   └── main.py               # Servidor FastAPI + webhook de WhatsApp
+├── orchestrator.py           # Orquestador conversacional de los 3 agentes
 ├── run_cli.py                # Prueba local del Agente 1 por terminal
 ├── run_inference.py          # Demo del motor de inferencia (IF/THEN)
 ├── run_orders.py             # Demo del Agente 2 (generación de pedido)
 ├── run_persist.py            # Demo de persistencia (guardar pedido en BD)
 ├── run_supervisor.py         # Demo del flujo completo 1 -> 2 -> 3
+├── run_orchestrator.py       # Demo conversacional (pedido + confirmación)
 ├── requirements.txt
 ├── .env.example              # Plantilla de variables (copiar a .env)
 ├── WHATSAPP_SETUP.md         # Guía para conectar WhatsApp
@@ -144,6 +147,7 @@ python run_inference.py         # razonamiento del sistema experto (IF/THEN)
 python run_orders.py            # genera un pedido con descuentos (Agente 2)
 python run_persist.py           # guarda un pedido en la base de datos
 python run_supervisor.py        # flujo completo de los 3 agentes (1 -> 2 -> 3)
+python run_orchestrator.py      # conversación con confirmación de pedido
 ```
 
 ### 6. Conectar a WhatsApp (opcional)
