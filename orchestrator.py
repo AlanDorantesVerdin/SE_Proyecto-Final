@@ -44,6 +44,7 @@ class Orchestrator:
         self.agent2 = OrderGeneratorAgent(db_path=db_path)
         self.agent3 = SupervisorAgent()
         self._pending: dict[str, Order] = {}   # teléfono -> pedido en espera de confirmación
+        self.last_order: Order | None = None   # último pedido (panel de inferencias en la UI)
 
     def handle_message(self, text: str, phone: str | None = None) -> str:
         """Punto de entrada único: recibe un mensaje y devuelve la respuesta."""
@@ -60,6 +61,7 @@ class Orchestrator:
             return interp.reply
 
         order = self.agent2.process(interp, customer_phone=phone)
+        self.last_order = order
         report = self.agent3.review(order)
 
         # Solo dejamos un pedido pendiente si hay algo disponible que confirmar.
@@ -74,6 +76,7 @@ class Orchestrator:
         if decision == "si":
             phone = None if key == "anon" else key
             confirmed = self.agent2.confirm(order, customer_phone=phone)
+            self.last_order = confirmed
             del self._pending[key]
             return self._confirmation_message(confirmed)
 
