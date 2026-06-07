@@ -21,6 +21,7 @@ razonamiento en cada paso.
 | **Persistencia en BD** | ✅ Guarda pedidos y rentas, descuenta stock, registra reabastecimiento |
 | **Agente 3 — Supervisor / Explicador** | ✅ Resume, explica inferencias y pide validación |
 | **Orquestador conversacional** | ✅ Une 1→2→3 con confirmación (SÍ/NO) por WhatsApp |
+| **Interfaz web (Streamlit)** | ✅ Chat con panel de inferencias en vivo |
 | Interfaz de usuario (UI) | ⏳ Pendiente |
 
 ---
@@ -91,6 +92,8 @@ SE_Proyecto-Final/
 │   └── whatsapp_twilio.py    # Adaptador del canal WhatsApp (Twilio)
 ├── api/
 │   └── main.py               # Servidor FastAPI + webhook de WhatsApp
+├── ui/
+│   └── app.py                # Interfaz web de chat (Streamlit)
 ├── orchestrator.py           # Orquestador conversacional de los 3 agentes
 ├── run_cli.py                # Prueba local del Agente 1 por terminal
 ├── run_inference.py          # Demo del motor de inferencia (IF/THEN)
@@ -150,7 +153,14 @@ python run_supervisor.py        # flujo completo de los 3 agentes (1 -> 2 -> 3)
 python run_orchestrator.py      # conversación con confirmación de pedido
 ```
 
-### 6. Conectar a WhatsApp (opcional)
+### 6. Interfaz web de chat (recomendada para la demo)
+```powershell
+streamlit run ui/app.py
+```
+Abre en el navegador (http://localhost:8501) un chat con el sistema y un panel
+lateral que muestra las **inferencias en vivo**, el catálogo y el cliente simulado.
+
+### 7. Conectar a WhatsApp (opcional)
 Levanta el servidor del webhook:
 ```powershell
 uvicorn api.main:app --reload --port 8000
