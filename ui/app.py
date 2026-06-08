@@ -21,7 +21,6 @@ load_dotenv()
 
 import streamlit as st
 
-from core.llm_client import LLMClient
 from database.repository import count_movies, list_movies
 from database.seed import seed
 from orchestrator import Orchestrator
@@ -50,8 +49,9 @@ with st.sidebar:
     st.title("🎬 CineFísico")
     st.caption("Sistema experto · 3 agentes inteligentes")
 
-    llm_on = LLMClient().available
-    st.markdown(f"**IA (Gemini):** {'🟢 activa' if llm_on else '🟠 solo reglas'}")
+    llm = orch.agent1.llm
+    estado = f"🟢 {llm.label}" if llm.available else "🟠 solo reglas"
+    st.markdown(f"**IA:** {estado}")
 
     cliente = st.selectbox("Cliente (simulado):", list(CUSTOMERS))
     st.session_state.phone = CUSTOMERS[cliente]

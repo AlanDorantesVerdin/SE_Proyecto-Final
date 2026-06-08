@@ -53,9 +53,10 @@ razonamiento en cada paso.
 ### Enfoque híbrido (sistema experto + IA)
 - **Reglas** (`core/knowledge_base.py`): clasificación determinista y
   explicable de la intención. **Siempre funciona**, incluso sin Internet.
-- **LLM** (`core/llm_client.py`, Gemini): mejora la comprensión del lenguaje
-  natural. Si no hay API key o falla, el sistema **degrada elegantemente** a
-  solo-reglas sin caerse.
+- **LLM** (`core/llm_client.py`): **Ollama** (local, sin límites) o **Gemini**
+  (nube). Mejora la comprensión y responde consultas libres (recomendaciones,
+  precios, cine…). Si no está disponible, el sistema **degrada elegantemente**
+  a solo-reglas sin caerse.
 
 ---
 
@@ -63,7 +64,7 @@ razonamiento en cada paso.
 
 - **Python 3.11+** (probado en 3.13)
 - **SQLite** — base de datos local
-- **Google Gemini** (`google-genai`) — IA / LLM
+- **IA / LLM** — Ollama (local, sin límites) · Google Gemini (nube, alternativa)
 - **FastAPI + Uvicorn** — webhook para WhatsApp (etapa posterior)
 - **python-dotenv** — manejo de credenciales
 
@@ -129,13 +130,14 @@ pip install -r requirements.txt
 ```powershell
 copy .env.example .env          # Windows  (cp en Linux/macOS)
 ```
-Edita `.env` y coloca tu **API key de Gemini** (gratis en
-<https://aistudio.google.com/apikey>):
-```env
-GEMINI_API_KEY=tu_api_key_aqui
-LLM_MODEL=gemini-2.5-flash
-```
-> 💡 Sin API key el sistema **igual funciona** en modo solo-reglas.
+El sistema usa **IA local con Ollama** por defecto (sin límites de cuota).
+Instálalo siguiendo **[OLLAMA_SETUP.md](OLLAMA_SETUP.md)** (resumen: instala
+Ollama y ejecuta `ollama pull llama3.2`).
+
+¿Prefieres **Gemini** (nube)? En `.env` pon `LLM_PROVIDER=gemini` y tu
+`GEMINI_API_KEY` (gratis en <https://aistudio.google.com/apikey>).
+
+> 💡 Sin ningún proveedor disponible, el sistema **igual funciona** en modo solo-reglas.
 
 ### 4. Poblar la base de datos
 ```powershell
