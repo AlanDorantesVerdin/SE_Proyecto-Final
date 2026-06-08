@@ -169,28 +169,51 @@ class CustomerServiceAgent:
 
     # -------------------------------------------------------------- capa LLM
     def _llm_interpret(self, text: str, interp: Interpretation) -> dict | None:
-        """Pide a Gemini una interpretación estructurada (JSON)."""
+        """
+        Pide a Gemini una interpretación estructurada (JSON) en UNA sola llamada.
+
+        Cuando la intención es 'explorar_catalogo' o 'desconocido' (preguntas
+        libres), Gemini también genera la respuesta directamente en ese mismo
+        JSON (campo 'reply'), evitando una segunda llamada y reduciendo el uso
+        de la cuota de la API.
+        """
         if not self.llm.available:
             interp.add_trace("llm", "LLM no disponible: se usan solo reglas.")
             return None
 
-        catalog = ", ".join(m["title"] for m in list_movies(self.db_path))
+        movies = list_movies(self.db_path)
+        catalog_ids = ", ".join(m["title"] for m in movies)
+        catalog_detail = "\n".join(
+            f"- {m['title']} ({m['genre']}, {m['year']}) "
+            f"renta ${m['price_rent']:.0f} compra ${m['price_buy']:.0f} stock {m['stock']}"
+            for m in movies
+        )
         system = (
-            "Eres el Agente de Atención al Cliente de la tienda de películas "
-            "físicas 'CineFísico'. Interpretas el mensaje del cliente y "
-            "respondes ÚNICAMENTE con JSON válido, sin texto adicional."
+            "Eres el Agente de Atención al Cliente de 'CineFísico', una tienda "
+            "moderna de películas físicas (DVD, Blu-ray, 4K). Eres amable, conciso "
+            "y experto en cine. Respondes ÚNICAMENTE con JSON válido, sin texto extra."
         )
         prompt = (
-            f"Catálogo disponible: {catalog}\n\n"
+            f"Catálogo (para identificar títulos): {catalog_ids}\n\n"
             f'Mensaje del cliente: "{text}"\n\n'
-            "Devuelve un JSON EXACTAMENTE con esta forma:\n"
-            '{\n'
+            "Devuelve un JSON con esta forma:\n"
+            "{\n"
             '  "intent": "saludo|explorar_catalogo|rentar|comprar|'
             'consultar_disponibilidad|devolver|soporte|despedida|desconocido",\n'
-            '  "items": [{"title": "titulo del catalogo mas parecido", '
-            '"quantity": 1, "action": "rentar|comprar|null"}]\n'
-            "}\n"
-            "Si el cliente no menciona películas, 'items' debe ser []."
+            '  "items": [{"title": "titulo exacto del catalogo", '
+            '"quantity": 1, "action": "rentar|comprar|null"}],\n'
+            '  "reply": null\n'
+            "}\n\n"
+            "Reglas importantes:\n"
+            "- 'soporte' SOLO para quejas o problemas con un pedido existente.\n"
+            "- 'explorar_catalogo' para recomendaciones, preguntas de precios, "
+            "formatos, géneros o cualquier pregunta general sobre la tienda.\n"
+            "- 'desconocido' para temas ajenos a películas o la tienda.\n"
+            "- Si intent es 'explorar_catalogo' o 'desconocido', escribe en 'reply' "
+            "una respuesta útil en español (máx. 3 oraciones) usando este catálogo:\n"
+            f"{catalog_detail}\n"
+            "- Si intent NO es explorar_catalogo ni desconocido, deja 'reply': null.\n"
+            "- Si el cliente no menciona películas del catálogo, 'items' debe ser []."
         )
         data = self.llm.generate_json(prompt, system=system)
         if not data:
@@ -234,6 +257,12 @@ class CustomerServiceAgent:
         # Preferimos los items del LLM; si no detectó ninguno, usamos las reglas.
         interp.items = llm_items or rule_items
 
+        # Si Gemini ya generó la respuesta (para explorar_catalogo/desconocido),
+        # la guardamos para usarla directamente sin segunda llamada a la API.
+        llm_reply = (data.get("reply") or "").strip()
+        if llm_reply:
+            interp._llm_prebuilt_reply = llm_reply
+
     # ------------------------------------------------------------ validación
     def _validate_items(self, interp: Interpretation) -> None:
         """Confirma cada película contra el catálogo y anexa stock/precio."""
@@ -273,10 +302,18 @@ class CustomerServiceAgent:
                     "Vuelve pronto.")
 
         if intent == Intent.SUPPORT:
+            prebuilt = getattr(interp, "_llm_prebuilt_reply", "")
+            if prebuilt:
+                return prebuilt
             return ("Lamento el inconveniente. Cuéntame con detalle qué ocurrió "
                     "(número de pedido o título) y con gusto lo reviso. 🛠️")
 
         if intent == Intent.BROWSE and not items:
+            # Si Gemini ya generó la respuesta (en la misma llamada de clasificación),
+            # la usamos directamente sin una segunda llamada a la API.
+            prebuilt = getattr(interp, "_llm_prebuilt_reply", "")
+            if prebuilt:
+                return prebuilt
             destacados = [m for m in list_movies(self.db_path) if m["stock"] > 0][:5]
             listado = "\n".join(
                 f"• *{m['title']}* ({m['year']}, {m['genre']}) — "
@@ -293,8 +330,51 @@ class CustomerServiceAgent:
             verbo = "rentar" if intent == Intent.RENT else "comprar"
             return f"¡Con gusto{name}! ¿Qué película te gustaría {verbo}?"
 
-        return (f"Disculpa{name}, no estoy seguro de haberte entendido. ¿Quieres "
-                "ver el *catálogo*, *rentar* o *comprar* una película? 🎬")
+        # Fallback con IA: respuesta libre del asistente para cualquier consulta.
+        # Si el LLM ya generó la respuesta en la clasificación, se reutiliza.
+        prebuilt = getattr(interp, "_llm_prebuilt_reply", "")
+        if prebuilt:
+            return prebuilt
+        return self._llm_free_reply(interp.raw_text, customer)
+
+    def _llm_free_reply(self, text: str, customer) -> str:
+        """
+        Responde con Gemini cualquier mensaje que no encaja en las reglas:
+        recomendaciones por género, preguntas sobre actores, dudas generales, etc.
+        Si el LLM no está disponible, da la respuesta genérica de plantilla.
+        """
+        if not self.llm.available:
+            return ("Disculpa, no estoy seguro de haberte entendido. ¿Quieres "
+                    "ver el *catálogo*, *rentar* o *comprar* una película? 🎬")
+
+        catalogo = "\n".join(
+            f"- {m['title']} ({m['genre']}, {m['year']}) "
+            f"renta ${m['price_rent']:.0f} compra ${m['price_buy']:.0f} "
+            f"stock {m['stock']}"
+            for m in list_movies(self.db_path)
+        )
+        cliente_info = ""
+        if customer:
+            cliente_info = (f"\nCliente: {customer['name']}, "
+                            f"{'frecuente' if customer['is_frequent'] else 'regular'}, "
+                            f"{customer['rentals_count']} rentas previas.")
+
+        system = (
+            "Eres el asistente virtual de *CineFísico*, una tienda moderna de "
+            "películas en formato físico (DVD, Blu-ray, 4K). Eres amable, conciso "
+            "y experto en cine. Respondes SOLO en español. Si el cliente pregunta "
+            "algo fuera del tema de películas o la tienda, lo rediriges con amabilidad."
+        )
+        prompt = (
+            f"Catálogo actual:\n{catalogo}"
+            f"{cliente_info}\n\n"
+            f"Mensaje del cliente: \"{text}\"\n\n"
+            "Responde de forma natural y útil en máximo 3 oraciones. "
+            "Puedes recomendar películas del catálogo si es relevante."
+        )
+        respuesta = self.llm.generate(prompt, system=system)
+        return respuesta or ("Disculpa, no estoy seguro de haberte entendido. "
+                             "¿Quieres ver el *catálogo*, *rentar* o *comprar*? 🎬")
 
     @staticmethod
     def _reply_for_items(intent: Intent, items: list[RequestedItem]) -> str:
