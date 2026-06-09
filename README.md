@@ -3,7 +3,7 @@
 Sistema experto moderno basado en **agentes inteligentes** para una tienda de
 películas en **formato físico** (estilo *Blockbuster* moderno): renta, compra,
 consulta de catálogo y soporte. Combina un **motor de reglas** (sistema experto
-clásico) con **IA moderna** (Gemini) y ofrece **explicabilidad** del
+clásico) con **IA moderna** (Ollama o Gemini) y ofrece **explicabilidad** del
 razonamiento en cada paso.
 
 > Proyecto académico — *Sistemas Expertos*.
@@ -22,7 +22,8 @@ razonamiento en cada paso.
 | **Agente 3 — Supervisor / Explicador** | ✅ Resume, explica inferencias y pide validación |
 | **Orquestador conversacional** | ✅ Une 1→2→3 con confirmación (SÍ/NO) por WhatsApp |
 | **Interfaz web (Streamlit)** | ✅ Chat con panel de inferencias en vivo |
-| Interfaz de usuario (UI) | ⏳ Pendiente |
+| **Pruebas automatizadas** | ✅ 16 pruebas (motor, agentes, persistencia, flujo) |
+| Prototipo UI/UX (mockups) | ⏳ Pendiente |
 
 ---
 
@@ -81,14 +82,14 @@ SE_Proyecto-Final/
 ├── core/
 │   ├── schemas.py            # Objetos de dominio (Intent, Interpretation…)
 │   ├── knowledge_base.py     # Reglas/keywords (base de conocimiento)
-│   ├── llm_client.py         # Cliente Gemini con degradación elegante
+│   ├── llm_client.py         # Cliente LLM (Ollama/Gemini) con degradación
 │   ├── inference_engine.py   # Motor de inferencia (forward chaining)
 │   ├── business_rules.py     # Reglas de negocio (descuentos, stock)
 │   └── console.py            # Utilidad de salida UTF-8 (Windows)
 ├── database/
 │   ├── db.py                 # Conexión y esquema SQLite
 │   ├── repository.py         # Consultas (catálogo, clientes)
-│   └── seed.py               # Datos de ejemplo (catálogo de películas)
+│   └── seed.py               # Datos de ejemplo (catálogo, clientes, rentas)
 ├── channels/
 │   └── whatsapp_twilio.py    # Adaptador del canal WhatsApp (Twilio)
 ├── api/
@@ -96,6 +97,7 @@ SE_Proyecto-Final/
 ├── ui/
 │   └── app.py                # Interfaz web de chat (Streamlit)
 ├── orchestrator.py           # Orquestador conversacional de los 3 agentes
+├── tests/                    # Pruebas automatizadas (unittest)
 ├── run_cli.py                # Prueba local del Agente 1 por terminal
 ├── run_inference.py          # Demo del motor de inferencia (IF/THEN)
 ├── run_orders.py             # Demo del Agente 2 (generación de pedido)
@@ -105,6 +107,7 @@ SE_Proyecto-Final/
 ├── requirements.txt
 ├── .env.example              # Plantilla de variables (copiar a .env)
 ├── WHATSAPP_SETUP.md         # Guía para conectar WhatsApp
+├── OLLAMA_SETUP.md           # Guía para IA local con Ollama
 └── .gitignore
 ```
 
@@ -170,6 +173,16 @@ uvicorn api.main:app --reload --port 8000
 Abre <http://127.0.0.1:8000/> para ver el estado. Para enlazarlo con WhatsApp
 (cuenta de Twilio + ngrok) sigue la guía paso a paso:
 **[WHATSAPP_SETUP.md](WHATSAPP_SETUP.md)**.
+
+---
+
+## 🧪 Pruebas
+
+Ejecuta la suite de pruebas automatizadas (16 pruebas, sin dependencias externas):
+```powershell
+python -m unittest discover -s tests
+```
+Cubren el motor de inferencia, los agentes, la persistencia y el flujo completo.
 
 ---
 
