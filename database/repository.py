@@ -206,3 +206,43 @@ def count_orders(db_path: str | None = None) -> int:
         return conn.execute("SELECT COUNT(*) AS n FROM orders").fetchone()["n"]
     finally:
         conn.close()
+
+
+def count_overdue_rentals(customer_id: int | None, db_path: str | None = None) -> int:
+    """Cuenta las rentas vencidas (sin devolver) de un cliente."""
+    if not customer_id:
+        return 0
+    today = date.today().isoformat()
+    conn = get_connection(db_path)
+    try:
+        row = conn.execute(
+            "SELECT COUNT(*) AS n FROM rentals "
+            "WHERE customer_id = ? AND returned_at IS NULL AND due_date < ?",
+            (customer_id, today),
+        ).fetchone()
+        return row["n"]
+    finally:
+        conn.close()
+
+
+def list_overdue_rentals(customer_id: int | None = None,
+                         db_path: str | None = None) -> list[sqlite3.Row]:
+    """Lista las rentas vencidas (de un cliente o de todos)."""
+    today = date.today().isoformat()
+    conn = get_connection(db_path)
+    try:
+        query = (
+            "SELECT r.*, m.title, c.name AS customer_name "
+            "FROM rentals r "
+            "JOIN movies m ON m.id = r.movie_id "
+            "JOIN customers c ON c.id = r.customer_id "
+            "WHERE r.returned_at IS NULL AND r.due_date < ? "
+        )
+        params: list = [today]
+        if customer_id:
+            query += "AND r.customer_id = ? "
+            params.append(customer_id)
+        query += "ORDER BY r.due_date"
+        return conn.execute(query, params).fetchall()
+    finally:
+        conn.close()

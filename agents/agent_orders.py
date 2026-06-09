@@ -15,7 +15,12 @@ from __future__ import annotations
 from core.business_rules import build_order_rules, make_order_facts
 from core.inference_engine import InferenceEngine
 from core.schemas import Intent, Interpretation, Order, OrderLine
-from database.repository import ensure_customer, get_customer_by_phone, persist_order
+from database.repository import (
+    count_overdue_rentals,
+    ensure_customer,
+    get_customer_by_phone,
+    persist_order,
+)
 
 
 class OrderGeneratorAgent:
@@ -44,6 +49,8 @@ class OrderGeneratorAgent:
 
         # Motor de inferencia: aplica las reglas de negocio sobre el pedido.
         facts = make_order_facts(customer, items)
+        if customer:
+            facts["overdue_count"] = count_overdue_rentals(customer["id"], self.db_path)
         result = self.engine.run(facts)
 
         lines = [

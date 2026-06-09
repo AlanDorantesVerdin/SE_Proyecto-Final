@@ -54,6 +54,7 @@ def make_order_facts(customer: dict | None, items: list[dict]) -> dict:
         "units_total": unidades,
         "discount_pct": 0,
         "restock": [],
+        "overdue_count": 0,
         "flags": {},
     }
 
@@ -70,6 +71,13 @@ def _then_restock(f: dict) -> str:
         for it in faltantes
     )
     return f"Stock insuficiente: {detalle}. Se sugiere reabastecer."
+
+
+def _then_overdue(f: dict) -> str:
+    n = f.get("overdue_count", 0)
+    f["flags"]["rentas_vencidas"] = n
+    return (f"El cliente tiene {n} renta(s) vencida(s); se recomienda "
+            "regularizarlas antes de una nueva renta.")
 
 
 def _then_frecuente(f: dict) -> str:
@@ -120,6 +128,13 @@ def build_order_rules() -> list[Rule]:
             condition=lambda f: any(not it["available"] for it in f["items"]),
             action=_then_restock,
             priority=100,
+        ),
+        Rule(
+            name="rentas_vencidas",
+            description="SI el cliente tiene rentas vencidas ENTONCES advertir",
+            condition=lambda f: f.get("overdue_count", 0) > 0,
+            action=_then_overdue,
+            priority=90,
         ),
         Rule(
             name="descuento_cliente_frecuente",
