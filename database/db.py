@@ -35,12 +35,15 @@ CREATE TABLE IF NOT EXISTS customers (
 
 -- Tablas usadas por el Agente 2 (Generador de Pedido) en etapas posteriores.
 CREATE TABLE IF NOT EXISTS orders (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    customer_id INTEGER REFERENCES customers(id),
-    type        TEXT,                            -- compra | renta
-    total       REAL DEFAULT 0,
-    status      TEXT DEFAULT 'pendiente',
-    created_at  TEXT DEFAULT CURRENT_TIMESTAMP
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_id  INTEGER REFERENCES customers(id),
+    type         TEXT,                           -- compra | renta | mixto
+    total        REAL DEFAULT 0,
+    status       TEXT DEFAULT 'por_validar',     -- por_validar | confirmado | rechazado
+    channel      TEXT DEFAULT 'whatsapp',
+    phone        TEXT,
+    details_json TEXT,                           -- snapshot del pedido (líneas, descuentos, razonamiento)
+    created_at   TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS order_items (
@@ -69,6 +72,9 @@ CREATE TABLE IF NOT EXISTS restock_suggestions (
     movie_id      INTEGER REFERENCES movies(id),
     title         TEXT,
     suggested_qty INTEGER,
+    requests      INTEGER DEFAULT 1,
+    kind          TEXT DEFAULT 'agotado',        -- agotado | stock_bajo | titulo_nuevo
+    genre         TEXT,
     created_at    TEXT DEFAULT CURRENT_TIMESTAMP,
     status        TEXT DEFAULT 'pendiente'       -- pendiente | atendida
 );

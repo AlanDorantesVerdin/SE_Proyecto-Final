@@ -95,9 +95,12 @@ class OrderGeneratorAgent:
             tipo = "compra"
 
         order.order_id = persist_order(
-            customer_id=customer_id, tipo=tipo, order=order, db_path=self.db_path
+            customer_id=customer_id, tipo=tipo, order=order,
+            phone=customer_phone, channel="whatsapp",
+            status="por_validar", reasoning=order.reasoning,
+            db_path=self.db_path,
         )
-        order.status = "confirmado"
+        order.status = "por_validar"
         return order
 
     def _items_from_interpretation(self, interp: Interpretation) -> list[dict]:

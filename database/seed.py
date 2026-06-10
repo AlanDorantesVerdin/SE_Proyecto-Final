@@ -11,9 +11,10 @@ para demostrar la inferencia de "rentas vencidas".
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+import json
+from datetime import date, datetime, timedelta
 
-from database.db import get_connection, init_db
+from database.db import SCHEMA, get_connection
 
 # (título, género, año, formato, precio_compra, precio_renta, stock, rating)
 MOVIES = [
@@ -72,6 +73,102 @@ def _seed_sample_rentals(conn) -> None:
         )
 
 
+# Pedidos confirmados (historial): (teléfono, tipo, [(título, cant)], minutos_atrás)
+DEMO_HISTORY = [
+    ("+5216561234567", "renta",  [("The Matrix", 1), ("Interestelar", 1)],        35),
+    ("+5216551112233", "compra", [("Coco", 1), ("El Rey León", 1)],                95),
+    ("+5216559876543", "renta",  [("Pulp Fiction", 1)],                            140),
+    ("+5216561234567", "compra", [("El Padrino", 1), ("Spider-Man", 1)],           210),
+    ("+5216551112233", "renta",  [("Shrek", 2), ("Toy Story", 1)],                 280),
+    ("+5216567654321", "renta",  [("Titanic", 1)],                                 360),
+    ("+5216559876543", "compra", [("Avengers", 1)],                                430),
+    ("+5216561234567", "renta",  [("Volver al Futuro", 1), ("Terminator 2", 1)],   520),
+    ("+5216551112233", "compra", [("Interestelar", 1)],                            700),
+    ("+5216567654321", "renta",  [("El Exorcista", 1)],                            900),
+]
+
+# Pedidos por validar (llegan del bot): (teléfono, tipo, [(título, cant, acción)], min)
+DEMO_PENDING = [
+    ("+5216561234567", "renta",  [("The Matrix", 1, "rentar"), ("Interestelar", 1, "rentar"),
+                                  ("Spider-Man", 1, "rentar"), ("Avengers", 1, "rentar"),
+                                  ("Coco", 1, "rentar")],                          6),
+    ("+5216559876543", "compra", [("Forrest Gump", 1, "comprar"), ("Avengers", 1, "comprar")], 14),
+    ("+5216551112233", "compra", [("El Padrino", 1, "comprar"), ("Interestelar", 1, "comprar")], 22),
+    ("+5216567654321", "renta",  [("El Conjuro", 1, "rentar")],                    40),
+    ("+5216561234567", "renta",  [("Gladiador", 1, "rentar"), ("Pulp Fiction", 1, "rentar")], 58),
+]
+
+# Reabastecimiento extra: (título, kind, sugerido, solicitudes, género|None)
+DEMO_RESTOCK = [
+    ("Forrest Gump", "agotado",     5, 4, None),
+    ("El Conjuro",   "agotado",     4, 3, None),
+    ("Gladiador",    "stock_bajo",  4, 2, None),
+    ("Pulp Fiction", "stock_bajo",  3, 2, None),
+    ("Wicked",          "titulo_nuevo", 3, 5, "Musical"),
+    ("Gru 4",           "titulo_nuevo", 4, 7, "Animación"),
+    ("Godzilla x Kong", "titulo_nuevo", 3, 4, "Acción"),
+]
+
+
+def _seed_demo_orders(conn) -> None:
+    """Genera pedidos (historial + por validar) con totales reales del motor."""
+    from core.business_rules import build_order_rules, make_order_facts
+    from core.inference_engine import InferenceEngine
+
+    engine = InferenceEngine(build_order_rules())
+    movies = {r["title"]: dict(r) for r in conn.execute("SELECT * FROM movies").fetchall()}
+    customers = {r["phone"]: dict(r) for r in conn.execute("SELECT * FROM customers").fetchall()}
+
+    def insert(phone, tipo, lines, mins, status):
+        cust = customers[phone]
+        default_action = "rentar" if tipo == "renta" else "comprar"
+        items = [{"title": t, "quantity": q, "action": (ln[2] if len(ln) > 2 else default_action),
+                  "stock": movies[t]["stock"], "price_rent": movies[t]["price_rent"],
+                  "price_buy": movies[t]["price_buy"]}
+                 for ln in lines for t, q in [(ln[0], ln[1])]]
+        facts = make_order_facts(cust, items)
+        res = engine.run(facts)
+        snap_items = [{"movie_id": movies[it["title"]]["id"], "title": it["title"],
+                       "format": movies[it["title"]]["format"], "genre": movies[it["title"]]["genre"],
+                       "quantity": it["quantity"], "action": it["action"],
+                       "unit_price": it["unit_price"], "line_total": it["line_total"],
+                       "stock": movies[it["title"]]["stock"], "available": it["available"]}
+                      for it in facts["items"]]
+        created = (datetime.now() - timedelta(minutes=mins)).isoformat()
+        snap = {"customer_name": cust["name"], "phone": phone, "type": tipo, "channel": "whatsapp",
+                "items": snap_items, "subtotal": facts["subtotal"],
+                "discount_pct": facts["discount_pct"], "discount_amount": facts.get("discount_amount", 0),
+                "total": facts.get("total", 0), "reasoning": [{"text": r} for r in res.reasoning],
+                "needs_attention": any(not it["available"] for it in snap_items)}
+        cur = conn.execute(
+            "INSERT INTO orders (customer_id, type, total, status, channel, phone, details_json, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (cust["id"], tipo, facts.get("total", 0), status, "whatsapp", phone,
+             json.dumps(snap, ensure_ascii=False), created))
+        oid = cur.lastrowid
+        for it in snap_items:
+            if it["available"]:
+                conn.execute("INSERT INTO order_items (order_id, movie_id, quantity, unit_price) "
+                             "VALUES (?, ?, ?, ?)",
+                             (oid, it["movie_id"], it["quantity"], it["unit_price"]))
+
+    for phone, tipo, lines, mins in DEMO_HISTORY:
+        insert(phone, tipo, lines, mins, "confirmado")
+    for phone, tipo, lines, mins in DEMO_PENDING:
+        insert(phone, tipo, lines, mins, "por_validar")
+
+
+def _seed_restock(conn) -> None:
+    """Carga sugerencias de reabastecimiento de ejemplo."""
+    movies = {r["title"]: dict(r) for r in conn.execute("SELECT * FROM movies").fetchall()}
+    for title, kind, qty, req, genre in DEMO_RESTOCK:
+        m = movies.get(title)
+        conn.execute(
+            "INSERT INTO restock_suggestions (movie_id, title, suggested_qty, requests, kind, genre) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (m["id"] if m else None, title, qty, req, kind, m["genre"] if m else genre))
+
+
 def seed(db_path: str | None = None, with_samples: bool = False) -> None:
     """
     Crea las tablas y carga el catálogo + clientes (idempotente).
@@ -79,14 +176,14 @@ def seed(db_path: str | None = None, with_samples: bool = False) -> None:
     Si `with_samples` es True, también carga rentas de ejemplo (para demos).
     Los tests usan `with_samples=False` para partir de un estado limpio.
     """
-    init_db(db_path)
     conn = get_connection(db_path)
     try:
-        # Limpiar transacciones para un estado de demostración consistente
-        # (además, las claves foráneas impiden borrar películas con pedidos).
-        for tabla in ("order_items", "rentals", "restock_suggestions", "orders"):
-            conn.execute(f"DELETE FROM {tabla};")
-        conn.execute("DELETE FROM movies;")
+        # Reinicio total: se eliminan y recrean las tablas para garantizar que
+        # el esquema esté siempre actualizado (la base de datos es regenerable).
+        for tabla in ("order_items", "rentals", "restock_suggestions",
+                      "orders", "customers", "movies"):
+            conn.execute(f"DROP TABLE IF EXISTS {tabla};")
+        conn.executescript(SCHEMA)
         conn.executemany(
             "INSERT INTO movies "
             "(title, genre, year, format, price_buy, price_rent, stock, rating) "
@@ -105,8 +202,11 @@ def seed(db_path: str | None = None, with_samples: bool = False) -> None:
             )
         if with_samples:
             _seed_sample_rentals(conn)
+            _seed_demo_orders(conn)
+            _seed_restock(conn)
         conn.commit()
-        extra = f", {len(SAMPLE_RENTALS)} rentas de ejemplo" if with_samples else ""
+        extra = (f", {len(DEMO_HISTORY)} pedidos, {len(DEMO_PENDING)} por validar"
+                 if with_samples else "")
         print(f"✓ Base de datos lista: {len(MOVIES)} películas, "
               f"{len(CUSTOMERS)} clientes{extra}.")
     finally:

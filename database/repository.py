@@ -5,6 +5,7 @@ Centraliza el SQL para que los agentes no escriban consultas directamente.
 """
 from __future__ import annotations
 
+import json
 import sqlite3
 from datetime import date, timedelta
 
@@ -21,10 +22,12 @@ def list_movies(db_path: str | None = None) -> list[sqlite3.Row]:
 
 
 def count_movies(db_path: str | None = None) -> int:
-    """Cuenta cuántas películas hay en el catálogo."""
+    """Cuenta cuántas películas hay en el catálogo (0 si la BD aún no existe)."""
     conn = get_connection(db_path)
     try:
         return conn.execute("SELECT COUNT(*) AS n FROM movies").fetchone()["n"]
+    except sqlite3.OperationalError:
+        return 0
     finally:
         conn.close()
 
@@ -93,31 +96,47 @@ def ensure_customer(phone: str | None, name: str | None = None,
 
 
 def persist_order(*, customer_id: int | None, tipo: str, order,
+                  phone: str | None = None, channel: str = "whatsapp",
+                  status: str = "por_validar", reasoning=None,
                   due_days: int = 3, frequent_threshold: int = 3,
                   db_path: str | None = None) -> int:
     """
     Guarda un pedido completo en UNA sola transacción y devuelve su id.
 
-    - Inserta el pedido y sus líneas disponibles.
+    - Inserta el pedido (con un snapshot JSON para el panel) y sus líneas.
     - Descuenta el stock de cada película comprada/rentada.
     - Crea una renta (con fecha de vencimiento) por cada línea rentada.
     - Registra una sugerencia de reabastecimiento por cada línea agotada.
-    - Actualiza el conteo de rentas del cliente y lo marca como frecuente
-      al alcanzar el umbral.
+    - Actualiza el conteo de rentas del cliente y lo marca como frecuente.
+
+    Por defecto el pedido queda en estado 'por_validar' (lo confirma el
+    personal desde el panel web).
     """
     conn = get_connection(db_path)
     try:
         cur = conn.execute(
-            "INSERT INTO orders (customer_id, type, total, status) VALUES (?, ?, ?, ?)",
-            (customer_id, tipo, order.total, "confirmado"),
+            "INSERT INTO orders (customer_id, type, total, status, channel, phone) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (customer_id, tipo, order.total, status, channel, phone),
         )
         order_id = cur.lastrowid
         rented_units = 0
+        snapshot_items = []
 
         for ln in order.lines:
             movie = conn.execute(
-                "SELECT id, stock FROM movies WHERE title = ? COLLATE NOCASE", (ln.title,)
+                "SELECT id, stock, format, genre FROM movies WHERE title = ? COLLATE NOCASE",
+                (ln.title,),
             ).fetchone()
+            snapshot_items.append({
+                "movie_id": movie["id"] if movie else None,
+                "title": ln.title,
+                "format": movie["format"] if movie else "—",
+                "genre": movie["genre"] if movie else "—",
+                "quantity": ln.quantity, "action": ln.action,
+                "unit_price": ln.unit_price, "line_total": ln.line_total,
+                "stock": movie["stock"] if movie else 0, "available": ln.available,
+            })
             if not movie:
                 continue
 
@@ -142,9 +161,10 @@ def persist_order(*, customer_id: int | None, tipo: str, order,
             else:
                 faltan = max(1, ln.quantity - movie["stock"])
                 conn.execute(
-                    "INSERT INTO restock_suggestions (movie_id, title, suggested_qty) "
-                    "VALUES (?, ?, ?)",
-                    (movie["id"], ln.title, faltan),
+                    "INSERT INTO restock_suggestions (movie_id, title, suggested_qty, kind) "
+                    "VALUES (?, ?, ?, ?)",
+                    (movie["id"], ln.title, faltan,
+                     "agotado" if movie["stock"] == 0 else "stock_bajo"),
                 )
 
         if customer_id and rented_units:
@@ -157,8 +177,55 @@ def persist_order(*, customer_id: int | None, tipo: str, order,
                 (customer_id, frequent_threshold),
             )
 
+        snapshot = {
+            "customer_name": order.customer_name, "phone": phone,
+            "type": tipo, "channel": channel,
+            "items": snapshot_items,
+            "subtotal": order.subtotal, "discount_pct": order.discount_pct,
+            "discount_amount": order.discount_amount, "total": order.total,
+            "reasoning": [{"text": r} for r in (reasoning
+                          if reasoning is not None else order.reasoning)],
+            "needs_attention": any(not it["available"] for it in snapshot_items),
+        }
+        conn.execute("UPDATE orders SET details_json = ? WHERE id = ?",
+                     (json.dumps(snapshot, ensure_ascii=False), order_id))
         conn.commit()
         return order_id
+    finally:
+        conn.close()
+
+
+def validate_order(order_id: int, db_path: str | None = None) -> None:
+    """El personal valida un pedido: pasa de 'por_validar' a 'confirmado'."""
+    conn = get_connection(db_path)
+    try:
+        conn.execute(
+            "UPDATE orders SET status = 'confirmado' "
+            "WHERE id = ? AND status = 'por_validar'", (order_id,)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def reject_order(order_id: int, db_path: str | None = None) -> None:
+    """El personal rechaza un pedido: 'rechazado' y devuelve el stock reservado."""
+    conn = get_connection(db_path)
+    try:
+        row = conn.execute(
+            "SELECT details_json FROM orders WHERE id = ? AND status = 'por_validar'",
+            (order_id,),
+        ).fetchone()
+        if row and row["details_json"]:
+            snap = json.loads(row["details_json"])
+            for it in snap.get("items", []):
+                if it.get("available") and it.get("movie_id"):
+                    conn.execute(
+                        "UPDATE movies SET stock = stock + ? WHERE id = ?",
+                        (it["quantity"], it["movie_id"]),
+                    )
+        conn.execute("UPDATE orders SET status = 'rechazado' WHERE id = ?", (order_id,))
+        conn.commit()
     finally:
         conn.close()
 
