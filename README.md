@@ -23,7 +23,7 @@ razonamiento en cada paso.
 | **Orquestador conversacional** | ✅ Une 1→2→3 con confirmación (SÍ/NO) por WhatsApp |
 | **Interfaz web (Streamlit)** | ✅ Chat con panel de inferencias en vivo |
 | **Pruebas automatizadas** | ✅ 16 pruebas (motor, agentes, persistencia, flujo) |
-| Prototipo UI/UX (mockups) | ⏳ Pendiente |
+| **Panel web de administración (REBOBINA)** | ✅ Pedidos por validar, stock, clientes, ingresos, alertas |
 
 ---
 
@@ -66,7 +66,8 @@ razonamiento en cada paso.
 - **Python 3.11+** (probado en 3.13)
 - **SQLite** — base de datos local
 - **IA / LLM** — Ollama (local, sin límites) · Google Gemini (nube, alternativa)
-- **FastAPI + Uvicorn** — webhook para WhatsApp (etapa posterior)
+- **FastAPI + Uvicorn** — webhook de WhatsApp y panel de administración
+- **React** (vía FastAPI) — panel web REBOBINA con datos de SQLite
 - **python-dotenv** — manejo de credenciales
 
 ---
@@ -95,7 +96,10 @@ SE_Proyecto-Final/
 ├── api/
 │   └── main.py               # Servidor FastAPI + webhook de WhatsApp
 ├── ui/
-│   └── app.py                # Interfaz web de chat (Streamlit)
+│   └── app.py                # Interfaz web de chat (Streamlit, simulador cliente)
+├── webpanel/                 # Panel de administración REBOBINA (React + FastAPI)
+│   ├── data.py               # Genera los datos del panel desde la BD real
+│   └── static/               # Diseño del panel (HTML, CSS, React)
 ├── orchestrator.py           # Orquestador conversacional de los 3 agentes
 ├── tests/                    # Pruebas automatizadas (unittest)
 ├── run_cli.py                # Prueba local del Agente 1 por terminal
@@ -165,7 +169,18 @@ streamlit run ui/app.py
 Abre en el navegador (http://localhost:8501) un chat con el sistema y un panel
 lateral que muestra las **inferencias en vivo**, el catálogo y el cliente simulado.
 
-### 7. Conectar a WhatsApp (opcional)
+### 7. Panel de administración REBOBINA (para el dueño/empleados)
+```powershell
+python -m database.seed          # carga datos de demostración (recomendado)
+uvicorn api.main:app --port 8000
+```
+Abre **http://localhost:8000/panel/** — un dashboard de escritorio con: pedidos
+**por validar** (llegan del bot de WhatsApp), alertas (agotados, rentas vencidas,
+stock bajo, títulos solicitados), catálogo/stock, clientes, descuentos, historial
+e ingresos. El personal **valida o rechaza** los pedidos; no realiza la venta
+(eso lo hacen los 3 agentes).
+
+### 8. Conectar a WhatsApp (opcional)
 Levanta el servidor del webhook:
 ```powershell
 uvicorn api.main:app --reload --port 8000
