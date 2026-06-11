@@ -209,6 +209,15 @@ Cubren el motor de inferencia, los agentes, la persistencia y el flujo completo.
 
 ---
 
+## 📄 Documentación
+
+El **registro del proyecto** y el **manual de usuario** completo están en
+**[docs/GG_registro_Proy.md](docs/GG_registro_Proy.md)** — base del PDF entregable
+`GG_registro_Proy.pdf` (objetivo, arquitectura, base de conocimiento, inferencias,
+agentes, base de datos, herramientas y manual de instalación/uso).
+
+---
+
 ## 📝 Licencia
 
 Proyecto con fines educativos.
