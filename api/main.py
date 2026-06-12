@@ -29,7 +29,11 @@ import json  # noqa: E402
 from pathlib import Path  # noqa: E402
 
 from fastapi import FastAPI, Request, Response  # noqa: E402
-from fastapi.responses import FileResponse, PlainTextResponse  # noqa: E402
+from fastapi.responses import (  # noqa: E402
+    FileResponse,
+    HTMLResponse,
+    PlainTextResponse,
+)
 
 from channels.whatsapp_twilio import (  # noqa: E402
     build_reply,
@@ -59,12 +63,30 @@ _MEDIA = {".css": "text/css", ".js": "application/javascript",
 app = FastAPI(title="REBOBINA — CineFísico (WhatsApp + Panel)")
 
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
+def home() -> HTMLResponse:
+    """Página de inicio: enlaza al panel de administración."""
+    return HTMLResponse(
+        "<!DOCTYPE html><html lang='es'><head><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+        "<title>REBOBINA</title><style>"
+        "body{font-family:'Segoe UI',Arial,sans-serif;background:#1b1814;color:#f4ece0;"
+        "display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}"
+        ".c{text-align:center}h1{font-size:44px;color:#b9802b;margin:0 0 6px;letter-spacing:1px}"
+        "p{color:#bcae98}a{display:inline-block;margin-top:24px;padding:12px 28px;"
+        "background:#b9802b;color:#1b1814;text-decoration:none;border-radius:8px;font-weight:700}"
+        "</style></head><body><div class='c'><h1>REBOBINA</h1>"
+        "<p>Renta &amp; Venta de películas — panel de administración</p>"
+        "<a href='/panel/'>Abrir el panel &rarr;</a></div></body></html>"
+    )
+
+
+@app.get("/health")
 def health() -> dict:
-    """Health check: confirma que el servicio está vivo."""
+    """Health check (JSON): confirma que el servicio está vivo."""
     return {
         "status": "ok",
-        "service": "CineFísico",
+        "service": "REBOBINA / CineFísico",
         "agents": "1 (atención) + 2 (pedido) + 3 (explicador)",
         "llm": "activo" if llm.available else "solo reglas",
     }
