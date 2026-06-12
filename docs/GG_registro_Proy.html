@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang='es'>
+<head>
+<meta charset='utf-8'>
+<title>REBOBINA — Registro del proyecto</title>
+<style>
+@page { size: A4; margin: 2cm; }
+* { box-sizing: border-box; }
+body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11pt; line-height: 1.55;
+       color: #1f1b16; max-width: 820px; margin: 0 auto; padding: 0 16px; }
+h1 { font-size: 22pt; color: #b9802b; border-bottom: 3px solid #b9802b;
+     padding-bottom: 8px; margin-top: 0; page-break-before: always; }
+h1:first-of-type { page-break-before: avoid; font-size: 27pt; border: none; margin-top: 48px; }
+h2 { font-size: 15pt; color: #2a2118; margin-top: 1.6em;
+     border-bottom: 1px solid #e6dccb; padding-bottom: 4px; }
+h3 { font-size: 12.5pt; color: #4a3d2c; }
+a { color: #34648f; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 10pt; }
+th, td { border: 1px solid #d8cdb8; padding: 6px 9px; text-align: left; vertical-align: top; }
+th { background: #f4ece0; }
+code { font-family: 'Consolas', monospace; background: #f3f0ea; padding: 1px 4px;
+       border-radius: 3px; font-size: 9.5pt; }
+pre { background: #f6f4ef; border: 1px solid #e6dccb; padding: 12px 14px;
+      border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+hr { border: none; border-top: 1px solid #e6dccb; margin: 1.5em 0; }
+hr:first-of-type { page-break-after: always; border: none; margin: 0; }
+blockquote { border-left: 3px solid #b9802b; margin: 1em 0; padding: 4px 14px;
+             color: #5a4d3a; background: #faf6ef; }
+@media print { body { max-width: none; } a { color: #1f1b16; text-decoration: none; } }
+</style>
+</head>
+<body>
+<!--
+  Documento de registro del proyecto (fuente en Markdown).
+  Exportar a PDF como: GG_registro_Proy.pdf
+  Las CAPTURAS marcadas con [ … ] se insertan al exportar.
+-->
+
+<h1>REBOBINA — Sistema Experto de Atención y Ventas con Agentes Inteligentes</h1>
+<p><strong>Materia:</strong> Sistemas Expertos
+<strong>Proyecto:</strong> Tienda de películas en formato físico (renta y venta) — "REBOBINA / CineFísico"
+<strong>Autor:</strong> Alan Dorantes Verdín
+<strong>Repositorio:</strong> <a href="https://github.com/AlanDorantesVerdin/SE_Proyecto-Final">https://github.com/AlanDorantesVerdin/SE_Proyecto-Final</a>
+<strong>Video demostrativo:</strong> <em>[pegar enlace de YouTube aquí]</em>
+<strong>Fecha:</strong> junio 2026</p>
+<hr />
+<h2>1. Objetivo</h2>
+<p>Desarrollar un <strong>sistema experto moderno basado en agentes inteligentes</strong> capaz de
+atender clientes, realizar inferencias y automatizar el proceso de venta y renta de
+películas en formato físico (estilo Blockbuster moderno). El sistema integra
+ingeniería del conocimiento, un motor de inferencia, base de datos, agentes
+inteligentes, IA moderna (LLM), explicabilidad del razonamiento y una arquitectura
+cliente-servidor, ejecutándose de manera <strong>local</strong> en una computadora personal.</p>
+<p>El cliente realiza sus pedidos por <strong>WhatsApp</strong>, conversando con un chat inteligente;
+los <strong>tres agentes</strong> procesan la venta de forma automática; y el dueño o los empleados
+supervisan todo desde un <strong>panel web de administración</strong> (REBOBINA), donde validan
+pedidos y controlan stock, clientes, ingresos y alertas.</p>
+<hr />
+<h2>2. Descripción del sistema</h2>
+<p>REBOBINA automatiza la atención y la venta de una tienda de películas:</p>
+<ol>
+<li><strong>El cliente escribe por WhatsApp</strong> (p. ej. <em>"Hola, quiero rentar 2 Matrix"</em>).</li>
+<li>El <strong>Agente 1 (Atención al Cliente)</strong> interpreta la intención y las películas.</li>
+<li>El <strong>Agente 2 (Generador de Pedido)</strong> valida contra el catálogo, ejecuta el
+   <strong>motor de inferencia</strong> (descuentos, stock, reabastecimiento, rentas vencidas) y
+   arma el pedido.</li>
+<li>El <strong>Agente 3 (Supervisor / Explicador)</strong> resume la venta, <strong>explica las
+   inferencias</strong> realizadas y pide la confirmación del cliente.</li>
+<li>El pedido queda <strong>"por validar"</strong> y aparece en el <strong>panel web</strong>, donde el personal
+   lo <strong>valida o rechaza</strong>. Toda la operación (ventas, stock, reabastecimiento) se
+   refleja en tiempo real para la administración.</li>
+</ol>
+<p>El personal <strong>no realiza la venta</strong>: esta ocurre entre los tres agentes. El personal
+solo <strong>supervisa y valida</strong>.</p>
+<hr />
+<h2>3. Arquitectura</h2>
+<pre><code>        CLIENTE                          NEGOCIO (dueño / empleados)
+          │                                        │
+     WhatsApp (Twilio)                     Panel web REBOBINA
+          │                                  (navegador, /panel/)
+          ▼                                        ▲
+   ┌──────────────┐                                │
+   │  FastAPI     │  webhook  ───────────►  datos en vivo (JSON)
+   │  (servidor)  │◄───────────────────────  validar / rechazar
+   └──────┬───────┘
+          │ orquestador (estado de conversación)
+          ▼
+   ┌─────────────┐   ┌─────────────┐   ┌──────────────┐
+   │  Agente 1   │──►│  Agente 2   │──►│  Agente 3    │
+   │ Atención    │   │ Pedido +    │   │ Supervisor / │
+   │ al cliente  │   │ inferencias │   │ Explicador   │
+   └─────────────┘   └──────┬──────┘   └──────────────┘
+          │                 │ guarda
+          ▼                 ▼
+   ┌───────────────────────────────────┐
+   │   Base de datos  SQLite            │
+   │ (películas, clientes, pedidos,     │
+   │  rentas, reabastecimiento)         │
+   └───────────────────────────────────┘
+</code></pre>
+<ul>
+<li><strong>Arquitectura cliente-servidor local:</strong> un servidor <strong>FastAPI</strong> expone el webhook
+  de WhatsApp y el panel web; ambos comparten la misma base de datos SQLite.</li>
+<li><strong>Enfoque híbrido:</strong> motor de reglas (sistema experto clásico, determinista y
+  explicable) + <strong>IA moderna</strong> (LLM) para la comprensión del lenguaje natural, con
+  <strong>degradación elegante</strong> (si el LLM no está disponible, el sistema sigue funcionando
+  solo con reglas).</li>
+</ul>
+<hr />
+<h2>4. Base de conocimiento</h2>
+<p>El conocimiento del sistema es <strong>explícito y editable</strong> (no una "caja negra"):</p>
+<ul>
+<li><strong>Reconocimiento de intención</strong> (<code>core/knowledge_base.py</code>): diccionarios de palabras
+  clave por intención (saludar, rentar, comprar, consultar disponibilidad, explorar
+  catálogo, soporte, despedida). Permite clasificar el mensaje del cliente sin depender
+  de Internet.</li>
+<li><strong>Reglas de negocio</strong> (<code>core/business_rules.py</code>): la política comercial codificada
+  como reglas IF/THEN con prioridades, descritas en lenguaje natural y con parámetros
+  ajustables (porcentajes, umbrales, tope).</li>
+<li><strong>Catálogo y clientes</strong> (base de datos): hechos sobre películas (stock, precios,
+  género, formato) y clientes (frecuencia, rentas) que alimentan las inferencias.</li>
+</ul>
+<hr />
+<h2>5. Inferencias utilizadas</h2>
+<p>El <strong>motor de inferencia</strong> (<code>core/inference_engine.py</code>) aplica <strong>encadenamiento hacia
+adelante</strong> (forward chaining) sobre los hechos de cada pedido, disparando reglas por
+prioridad y registrando una <strong>traza del razonamiento</strong> para la explicabilidad.</p>
+<p>Reglas IF/THEN implementadas:</p>
+<table>
+<thead>
+<tr>
+<th>Regla</th>
+<th>Condición (IF)</th>
+<th>Acción (THEN)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reabastecimiento</td>
+<td><code>stock &lt; cantidad solicitada</code></td>
+<td>Sugerir reabastecimiento del título</td>
+</tr>
+<tr>
+<td>Rentas vencidas</td>
+<td>El cliente tiene rentas sin devolver</td>
+<td>Advertir antes de una nueva renta</td>
+</tr>
+<tr>
+<td>Descuento cliente frecuente</td>
+<td><code>is_frequent = 1</code></td>
+<td>+10 % de descuento</td>
+</tr>
+<tr>
+<td>Descuento por volumen</td>
+<td><code>unidades ≥ 5</code></td>
+<td>+8 % de descuento</td>
+</tr>
+<tr>
+<td>Descuento por monto</td>
+<td><code>subtotal ≥ $300</code></td>
+<td>+10 % de descuento</td>
+</tr>
+<tr>
+<td>Tope de descuento</td>
+<td><code>descuento acumulado &gt; 25 %</code></td>
+<td>Limitar a 25 %</td>
+</tr>
+<tr>
+<td>Cliente no registrado</td>
+<td><code>cliente = null</code></td>
+<td>Invitar a registrarse</td>
+</tr>
+<tr>
+<td>Cálculo de total</td>
+<td>siempre</td>
+<td>Aplicar el descuento final al subtotal</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Ejemplo de encadenamiento:</strong> un cliente frecuente compra 5 títulos por $845 →
+se disparan <em>frecuente (+10 %)</em>, <em>volumen (+8 %)</em> y <em>monto (+10 %)</em> = 28 %, lo que a su
+vez dispara la regla de <em>tope</em> que lo limita a <strong>25 %</strong> → total $634. Cada paso queda
+explicado.</p>
+<hr />
+<h2>6. Explicación de los agentes</h2>
+<h3>Agente 1 — Atención al Cliente (<code>agents/agent_customer.py</code>)</h3>
+<p>Lee el mensaje, <strong>detecta la intención</strong> y <strong>extrae las entidades</strong> (películas,
+cantidades, acción). Combina reglas (deterministas) con un <strong>LLM</strong> (Ollama o Gemini)
+para entender lenguaje natural y responder cualquier consulta (recomendaciones,
+precios, formatos). Consulta el catálogo y responde automáticamente.</p>
+<h3>Agente 2 — Generador de Pedido (<code>agents/agent_orders.py</code>)</h3>
+<p><strong>Procesa</strong> la interpretación del Agente 1, <strong>valida</strong> contra el catálogo, ejecuta el
+<strong>motor de inferencia</strong> (descuentos, reabastecimiento, rentas vencidas), <strong>arma el
+pedido</strong> y lo <strong>guarda en la base de datos</strong> (estado <code>por_validar</code>), conservando el
+razonamiento.</p>
+<h3>Agente 3 — Supervisor / Explicador (<code>agents/agent_supervisor.py</code>)</h3>
+<p>Genera el <strong>resumen de la venta</strong>, <strong>explica las decisiones e inferencias</strong> (de forma
+fiel a las reglas que realmente se dispararon) y <strong>solicita la validación</strong> final.</p>
+<p>Un <strong>orquestador</strong> (<code>orchestrator.py</code>) coordina el flujo 1 → 2 → 3 con estado de
+conversación (confirmar con <em>SÍ</em> / cancelar con <em>NO</em>).</p>
+<hr />
+<h2>7. Base de datos utilizada</h2>
+<p><strong>SQLite</strong> (archivo local <code>database/store.db</code>, regenerable con <code>python -m database.seed</code>).
+Esquema (<code>database/db.py</code>):</p>
+<ul>
+<li><strong>movies</strong> — catálogo (título, género, año, formato, precio de venta/renta, stock, rating).</li>
+<li><strong>customers</strong> — clientes (nombre, teléfono, frecuente, rentas acumuladas).</li>
+<li><strong>orders</strong> / <strong>order_items</strong> — pedidos y sus líneas (con snapshot e historial).</li>
+<li><strong>rentals</strong> — rentas con fecha de vencimiento (para detectar rentas vencidas).</li>
+<li><strong>restock_suggestions</strong> — sugerencias de reabastecimiento generadas por las inferencias.</li>
+</ul>
+<p>El acceso a datos se centraliza en <code>database/repository.py</code>.</p>
+<p>[ CAPTURA 7.1 — diagrama o vista de las tablas de la base de datos ]</p>
+<hr />
+<h2>8. Herramientas utilizadas</h2>
+<table>
+<thead>
+<tr>
+<th>Herramienta</th>
+<th>Uso</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Python 3.13</strong></td>
+<td>Lenguaje principal</td>
+</tr>
+<tr>
+<td><strong>SQLite</strong></td>
+<td>Base de datos local</td>
+</tr>
+<tr>
+<td><strong>FastAPI + Uvicorn</strong></td>
+<td>Servidor: webhook de WhatsApp y panel web</td>
+</tr>
+<tr>
+<td><strong>Twilio</strong></td>
+<td>Canal de WhatsApp (sandbox)</td>
+</tr>
+<tr>
+<td><strong>Ollama</strong> / <strong>Google Gemini</strong> (<code>google-genai</code>)</td>
+<td>IA / LLM (local o nube)</td>
+</tr>
+<tr>
+<td><strong>React</strong> (servido por FastAPI)</td>
+<td>Panel de administración REBOBINA</td>
+</tr>
+<tr>
+<td><strong>Streamlit</strong></td>
+<td>Chat web (simulador de cliente)</td>
+</tr>
+<tr>
+<td><strong>httpx / python-dotenv</strong></td>
+<td>Llamadas HTTP y manejo de credenciales</td>
+</tr>
+<tr>
+<td><strong>unittest</strong></td>
+<td>Pruebas automatizadas</td>
+</tr>
+<tr>
+<td><strong>Git / GitHub</strong></td>
+<td>Control de versiones e historial de desarrollo</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>9. Capturas del sistema</h2>
+<blockquote>
+<p>Insertar al exportar a PDF:</p>
+</blockquote>
+<ul>
+<li>[ CAPTURA 9.1 — Panel REBOBINA: vista <em>Resumen</em> (ingresos, por validar, alertas) ]</li>
+<li>[ CAPTURA 9.2 — Panel: <em>Por validar</em> con el cajón de detalle y el razonamiento ]</li>
+<li>[ CAPTURA 9.3 — Panel: <em>Catálogo</em> con stock y <em>Alertas</em> ]</li>
+<li>[ CAPTURA 9.4 — Conversación del bot por WhatsApp (o el simulador de chat) ]</li>
+<li>[ CAPTURA 9.5 — Terminal: <code>python run_supervisor.py</code> (flujo de los 3 agentes) ]</li>
+<li>[ CAPTURA 9.6 — Terminal: <code>python run_inference.py</code> (razonamiento IF/THEN) ]</li>
+</ul>
+<hr />
+<h2>10. Conclusiones</h2>
+<p>El proyecto cumple los requisitos técnicos de un sistema experto moderno: integra
+<strong>ingeniería del conocimiento</strong> (reglas explícitas), un <strong>motor de inferencia</strong> con
+encadenamiento hacia adelante, <strong>base de datos</strong> relacional, <strong>tres agentes
+inteligentes</strong> que cooperan, <strong>IA moderna</strong> (LLM) con degradación elegante,
+<strong>explicabilidad</strong> del razonamiento y una <strong>arquitectura cliente-servidor</strong> local.</p>
+<p>El enfoque híbrido (reglas + LLM) resultó clave: las reglas garantizan decisiones
+<strong>deterministas y explicables</strong> —indispensables en un sistema experto— mientras que el
+LLM aporta naturalidad en la conversación. La separación entre la <strong>venta automática
+(agentes)</strong> y la <strong>supervisión humana (panel)</strong> refleja un caso de uso realista y
+demuestra automatización de procesos de negocio de principio a fin.</p>
+<p>Como trabajo futuro: notificaciones proactivas (avisar al cliente cuando llega un
+título), reportes históricos en el panel y autenticación de usuarios del panel.</p>
+<hr />
+<h1>Manual de Usuario</h1>
+<p>Guía para instalar, configurar y ejecutar REBOBINA <strong>desde cero</strong>.</p>
+<h2>A. Requisitos</h2>
+<ul>
+<li><strong>Python 3.11 o superior</strong> (probado en 3.13).</li>
+<li><strong>Git</strong> (para clonar el repositorio).</li>
+<li><em>(Opcional)</em> <strong>Ollama</strong> para IA local, o una <strong>API key de Gemini</strong> para IA en la nube.</li>
+<li><em>(Opcional)</em> Cuenta de <strong>Twilio</strong> y <strong>ngrok</strong> para WhatsApp.</li>
+</ul>
+<h2>B. Instalación</h2>
+<pre><code class="language-powershell">git clone https://github.com/AlanDorantesVerdin/SE_Proyecto-Final.git
+cd SE_Proyecto-Final
+py -m venv .venv
+.venv\Scripts\activate            # Windows  (source .venv/bin/activate en Linux/macOS)
+pip install -r requirements.txt
+</code></pre>
+<h2>C. Configurar dependencias / variables</h2>
+<pre><code class="language-powershell">copy .env.example .env            # cp en Linux/macOS
+</code></pre>
+<p>Elige el proveedor de IA en <code>.env</code>:
+- <strong>Ollama (local, recomendado, sin límites):</strong> instala Ollama, ejecuta
+  <code>ollama pull llama3.2</code> y deja <code>LLM_PROVIDER=ollama</code> (ver <code>OLLAMA_SETUP.md</code>).
+- <strong>Gemini (nube):</strong> pon <code>LLM_PROVIDER=gemini</code> y tu <code>GEMINI_API_KEY</code>.
+- Sin ningún proveedor, el sistema <strong>igual funciona</strong> en modo solo-reglas.</p>
+<h2>D. Conectar / poblar la base de datos</h2>
+<pre><code class="language-powershell">python -m database.seed           # crea las tablas y carga datos de demostración
+</code></pre>
+<h2>E. Ejecutar los agentes y las inferencias</h2>
+<pre><code class="language-powershell">python run_cli.py --demo          # Agente 1 (atención al cliente)
+python run_inference.py           # motor de inferencia (reglas IF/THEN)
+python run_orders.py              # Agente 2 (genera el pedido)
+python run_supervisor.py          # flujo completo de los 3 agentes
+python run_orchestrator.py        # conversación con confirmación de pedido
+</code></pre>
+<h2>F. Abrir el panel de administración (dueño / empleados)</h2>
+<pre><code class="language-powershell">uvicorn api.main:app --port 8000
+</code></pre>
+<p>Abre <strong>http://localhost:8000/panel/</strong> en el navegador. Verás pedidos por validar,
+alertas, catálogo, clientes, descuentos, historial e ingresos. Haz clic en un pedido
+para ver el detalle y <strong>validarlo o rechazarlo</strong>.</p>
+<h2>G. Conectar WhatsApp (opcional)</h2>
+<p>Sigue la guía <strong><code>WHATSAPP_SETUP.md</code></strong> (cuenta de Twilio + <code>ngrok http 8000</code>, y
+configurar la URL <code>https://XXXX.ngrok-free.app/webhook/whatsapp</code> en el sandbox).</p>
+<h2>H. Ejecutar las pruebas</h2>
+<pre><code class="language-powershell">python -m unittest discover -s tests
+</code></pre>
+<hr />
+<p><em>Fin del documento.</em></p>
+</body>
+</html>
